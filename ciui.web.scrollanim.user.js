@@ -23,7 +23,7 @@
             if ( window.CIUI && window.CIUI.animationOverridesEnabled ) return;
             document.scrollingElement.style.scrollBehavior = "unset";
             window.addEventListener( 'wheel', WheelAnimationOverride.event, {passive: false} );
-            window.CIUI = { animationOverridesEnabled: true };
+            window.CIUI ??= {}; window.CIUI.animationOverridesEnabled = true;
         }
         static recursiveTargetFind ( element, dX, dY ) {
             const scrollTopMax = element.scrollHeight - element.clientHeight;
