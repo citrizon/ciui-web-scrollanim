@@ -31,7 +31,7 @@
             const isXScrollable = ( dX == -1 && ( element.scrollLeft !== 0 ) ) || ( dX == 1 && ( element.scrollLeft <= ( scrollLeftMax - 1 ) ) ) && !!( element.scrollLeft || ( ++element.scrollLeft && element.scrollLeft-- ) );
             const isYScrollable = ( dY == -1 && ( element.scrollTop  !== 0 ) ) || ( dY == 1 && ( element.scrollTop  <= ( scrollTopMax  - 1 ) ) ) && !!( element.scrollTop  || ( ++element.scrollTop  && element.scrollTop--  ) );
 
-            if ( !isElementScrollReady ) return element.parentElement ?
+            if ( !( isElementScrollReady && ( isYScrollable || isXScrollable ) ) ) return element.parentElement ?
                     WheelAnimationOverride.recursiveTargetFind( element.parentElement, dX, dY ) :
                     ( {
                             scrollx: false,
@@ -44,7 +44,8 @@
             element.computedStyle ??= window.getComputedStyle(element);
 
             const isXHidden = !element.parentElement ? false : !( element.computedStyle.overflowX == 'auto' || element.computedStyle.overflowX == 'scroll' );
-            const isYHidden = !element.parentElement ? false : !( element.computedStyle.overflowY == 'auto' || element.computedStyle.overflowX == 'scroll' );
+            const isYHidden = !element.parentElement ? false : !( element.computedStyle.overflowY == 'auto' || element.computedStyle.overflowY == 'scroll' );
+
             if ( isElementScrollReady && ( ( !isXHidden && ( ( dX == 0 ) || ( dX !== 0 && isXScrollable ))  ) || ( !isYHidden && ( ( dY == 0 ) || ( dY !== 0 && isYScrollable ) ) ) ) )
                 return {
                     scrollx: element.scrollWidth > element.clientWidth,
