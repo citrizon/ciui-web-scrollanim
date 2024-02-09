@@ -20,10 +20,12 @@
 
     class WheelAnimationOverride {
         static override () {
-            if ( window.CIUI && window.CIUI.animationOverridesEnabled ) return;
+            if ( window.CIUI && window.CIUI.animationOverrideList && window.CIUI.animationOverrideList.WheelAnimationOverride )
+                return con.warn( `WheelAnimationOverride Instance already exists and it is managed by '${ window.CIUI.animationOverrideList.WheelAnimationOverride.manager }'` );
             document.scrollingElement.style.scrollBehavior = "unset";
             window.addEventListener( 'wheel', WheelAnimationOverride.event, {passive: false} );
-            window.CIUI ??= {}; window.CIUI.animationOverridesEnabled = true;
+            window.CIUI ??= {}; window.CIUI.animationOverrideList ??= {};
+            window.CIUI.animationOverrideList.WheelAnimationOverride = ( { manager: instanceName } );
         }
         static recursiveTargetFind ( element, dX, dY ) {
             const scrollTopMax = element.scrollHeight - element.clientHeight;
