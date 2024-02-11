@@ -69,6 +69,7 @@
         };
         }
         static event ( e ) {
+            if ( e.ctrlKey ) return;
             const directionY = !e.shiftKey ? Math.sign( e.deltaY ) : 0;
             const directionX = ( Math.sign( e.deltaX ) == 0 ) && e.shiftKey ? Math.sign( e.deltaY ) : Math.sign( e.deltaX );
             const obj = WheelAnimationOverride.recursiveTargetFind( e.target, directionX, directionY );
