@@ -77,22 +77,20 @@
                 animPosX: obj.element.scrollLeft,
                 animPosY: obj.element.scrollTop,
             };
-            if ( obj.scrolly && obj.isYScrollable && directionY !== 0 ) {
+            if ( !e.shiftKey && obj.scrolly && obj.isYScrollable && directionY !== 0 ) {
                 e.preventDefault(); e.stopPropagation();
                 obj.element.animationOverrides.animEnd = performance.now() + 300;
                 obj.element.animationOverrides.animPosY = Math.clamp( obj.element.animationOverrides.animPosY + e.deltaY, 0, obj.scrollTopMax );
                 if ( obj.element.animationOverrides.animFrame == null ) {
-                    obj.element.animationOverrides.animPosX = Math.clamp( obj.element.scrollLeft + e.deltaY, 0, obj.scrollLeftMax );
                     obj.element.animationOverrides.animPosY = Math.clamp( obj.element.scrollTop + e.deltaY, 0, obj.scrollTopMax );
                     requestAnimationFrame( WheelAnimationOverride.frame.bind( obj ) )
                 };
-            } else if ( obj.scrollx && obj.isXScrollable && directionX !== 0 ) {
+            } else if ( e.shiftKey && obj.scrollx && obj.isXScrollable && directionX !== 0 ) {
                 e.preventDefault(); e.stopPropagation();
                 obj.element.animationOverrides.animEnd = performance.now() + 300;
                 obj.element.animationOverrides.animPosX = Math.clamp( obj.element.animationOverrides.animPosX + e.deltaY, 0, obj.scrollLeftMax );
                 if ( obj.element.animationOverrides.animFrame == null ) {
                     obj.element.animationOverrides.animPosX = Math.clamp( obj.element.scrollLeft + e.deltaY, 0, obj.scrollLeftMax );
-                    obj.element.animationOverrides.animPosY = Math.clamp( obj.element.scrollTop + e.deltaY, 0, obj.scrollTopMax );
                     requestAnimationFrame( WheelAnimationOverride.frame.bind( obj ) )
                 };
             };
