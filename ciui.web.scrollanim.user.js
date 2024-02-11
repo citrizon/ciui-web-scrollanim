@@ -25,7 +25,7 @@
             document.scrollingElement.style.scrollBehavior = "unset";
             window.addEventListener( 'wheel', WheelAnimationOverride.event, {passive: false} );
             window.CIUI ??= {}; window.CIUI.animationOverrideList ??= {};
-            window.CIUI.animationOverrideList.WheelAnimationOverride = ( { manager: instanceName } );
+            window.CIUI.animationOverrideList.WheelAnimationOverride = ( { manager: "Standalone CIUI Instance for Scroll-wheel Animation" } );
         }
         static recursiveTargetFind ( element, dX, dY ) {
             const scrollTopMax = element.scrollHeight - element.clientHeight;
