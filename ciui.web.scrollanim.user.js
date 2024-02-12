@@ -83,6 +83,7 @@
                 obj.element.animationOverrides.animPosY = Math.clamp( obj.element.animationOverrides.animPosY + e.deltaY, 0, obj.scrollTopMax );
                 if ( obj.element.animationOverrides.animFrame == null ) {
                     obj.element.animationOverrides.animPosY = Math.clamp( obj.element.scrollTop + e.deltaY, 0, obj.scrollTopMax );
+                    obj.element.animationOverrides.animPosX = obj.element.scrollLeft;
                     requestAnimationFrame( WheelAnimationOverride.frame.bind( obj ) )
                 };
             } else if ( e.shiftKey && obj.scrollx && obj.isXScrollable && directionX !== 0 ) {
@@ -91,6 +92,7 @@
                 obj.element.animationOverrides.animPosX = Math.clamp( obj.element.animationOverrides.animPosX + e.deltaY, 0, obj.scrollLeftMax );
                 if ( obj.element.animationOverrides.animFrame == null ) {
                     obj.element.animationOverrides.animPosX = Math.clamp( obj.element.scrollLeft + e.deltaY, 0, obj.scrollLeftMax );
+                    obj.element.animationOverrides.animPosY = obj.element.scrollTop;
                     requestAnimationFrame( WheelAnimationOverride.frame.bind( obj ) )
                 };
             };
