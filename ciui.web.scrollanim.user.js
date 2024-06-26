@@ -13,101 +13,110 @@
 (function() {
     'use strict';
 
-    Math.clamp = function ( v,m,x ) { return Math.max( m, Math.min( x, v ) ); }
-    Math.lerp  = function ( a,b,t ) { return a + (b - a) * t; }
-    Math.range = function ( c,m,x ) { return (c - m) / (x - m); }
-    Math.sign  = function ( x     ) { return ((x > 0) - (x < 0)) || +x; }
+    // Settings
+    const settings = {
+        easing: 'easeIn',
+        time: 300
+    };
 
+    // Math Polyfill
+    const   clamp   = function ( v,m,x ) { return Math.max( m, Math.min( x, v ) ); },
+            lerp    = function ( a,b,t ) { return a + (b - a) * t; },
+            sign    = function ( x     ) { return ((x > 0) - (x < 0)) || +x; },
+            percent = function ( p,i,a ) { return (((p - i) * 100) / (a - i))/100; }
+
+    // Easing Functions for you to pick
+    const easeFunctions = {
+        easeIn: x => x === 1 ? 1 : 1 - Math.pow(2, -10 * x)
+    };
+
+    // Utilities
+    const overflowRegex = /(auto|scroll)/;
+    const cStyle = ( _node, prop ) => getComputedStyle( _node, null ).getPropertyValue( prop );
+    const overflow = _node => cStyle( _node, 'overflow' ) + cStyle( _node, 'overflow-y' ) + cStyle( _node, 'overflow-x' );
+    const csAllowsScroll = _node => _node instanceof Element ? overflowRegex.test( overflow( _node ) ) : false;
+
+    // Predefining some settings
+    const easingFunc = easeFunctions[ settings.easing ];
+
+    // Main Class
     class WheelAnimationOverride {
         static override () {
             if ( window.CIUI && window.CIUI.animationOverrideList && window.CIUI.animationOverrideList.WheelAnimationOverride )
-                return con.warn( `WheelAnimationOverride Instance already exists and it is managed by '${ window.CIUI.animationOverrideList.WheelAnimationOverride.manager }'` );
+                return console.warn( `WheelAnimationOverride Instance already exists and it is managed by '${ window.CIUI.animationOverrideList.WheelAnimationOverride.manager }'` );
             document.documentElement.style.scrollBehavior = "unset";
-            window.addEventListener( 'wheel', WheelAnimationOverride.event, {passive: false} );
+            window.addEventListener( 'wheel', WheelAnimationOverride.event, { passive: false } );
             window.CIUI ??= {}; window.CIUI.animationOverrideList ??= {};
-            window.CIUI.animationOverrideList.WheelAnimationOverride = ( { manager: "Standalone CIUI Instance for Scroll-wheel Animation" } );
+            window.CIUI.animationOverrideList.WheelAnimationOverride = ( { manager: "Standalone CIUI Instance" } );
         }
-        static recursiveTargetFind ( element, dX, dY ) {
+        static composedPathFilter ( dx, dy ) {
+            return function ( node ) {
+                const scrollYMax = node.scrollHeight - node.clientHeight;
+                const scrollXMax = node.scrollWidth  - node.clientWidth;
+                if ( ( scrollXMax < 1 && scrollYMax < 1 ) || !csAllowsScroll( node ) )
+                    return false;
+                return ( dx == 0 ? ( dy == -1 ? node.scrollTop > 0.1 : node.scrollTop < scrollYMax - 1 ) : false )
+                        || ( dy == 0 ? ( dx == -1 ? node.scrollLeft > 0.1 : node.scrollLeft < scrollXMax - 1 ) : false );
+            }
+        }
+        static findScrollableTarget ( event, dx, dy ) {
+            const path = event.composedPath();
+            const element = path.find( WheelAnimationOverride.composedPathFilter( dx, dy ) ) ?? document.scrollingElement;
             const scrollTopMax = element.scrollHeight - element.clientHeight;
-            const scrollLeftMax = element.scrollWidth - element.clientWidth;
-            const isElementScrollReady = ( element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight );
-
-            const isXScrollable = ( dX == -1 && ( element.scrollLeft !== 0 ) ) || ( dX == 1 && ( element.scrollLeft <= ( scrollLeftMax - 1 ) ) ) && !!( element.scrollLeft || ( ++element.scrollLeft && element.scrollLeft-- ) );
-            const isYScrollable = ( dY == -1 && ( element.scrollTop  !== 0 ) ) || ( dY == 1 && ( element.scrollTop  <= ( scrollTopMax  - 1 ) ) ) && !!( element.scrollTop  || ( ++element.scrollTop  && element.scrollTop--  ) );
-
-            if ( !( isElementScrollReady && ( isYScrollable || isXScrollable ) ) ) return element.parentElement ?
-                    WheelAnimationOverride.recursiveTargetFind( element.parentElement, dX, dY ) :
-                    ( {
-                            scrollx: false,
-                            scrolly: false,
-                            isXScrollable: false,
-                            isYScrollable: false,
-                            element: document.scrollingElement
-                    } );
-
-            element.computedStyle ??= window.getComputedStyle(element);
-
-            const isXHidden = !element.parentElement ? false : !( element.computedStyle.overflowX == 'auto' || element.computedStyle.overflowX == 'scroll' );
-            const isYHidden = !element.parentElement ? false : !( element.computedStyle.overflowY == 'auto' || element.computedStyle.overflowY == 'scroll' );
-
-            if ( isElementScrollReady && ( ( !isXHidden && ( ( dX == 0 ) || ( dX !== 0 && isXScrollable ))  ) || ( !isYHidden && ( ( dY == 0 ) || ( dY !== 0 && isYScrollable ) ) ) ) )
-                return {
-                    scrollx: element.scrollWidth > element.clientWidth,
-                    scrolly: element.scrollHeight > element.clientHeight,
-                    scrollTopMax,
-                    scrollLeftMax,
-                    isXScrollable,
-                    isYScrollable,
-                    element
-                };
-            else return element.parentElement ? WheelAnimationOverride.recursiveTargetFind( element.parentElement, dX, dY ) : {
-                scrollx: false,
-                scrolly: false,
-                isXScrollable: false,
-                isYScrollable: false,
-                element: document.scrollingElement
-        };
+            const scrollLeftMax = element.scrollWidth  - element.clientWidth;
+            return {
+                scrollTopMax,
+                scrollLeftMax,
+                isYScrollable: ( dy == -1 ? element.scrollTop > 0.1 : element.scrollTop < scrollTopMax - 1 ) && element.scrollHeight > element.clientHeight,
+                isXScrollable: ( dx == -1 ? element.scrollLeft > 0.1 : element.scrollLeft < scrollLeftMax - 1 ) && element.scrollWidth > element.clientWidth,
+                element
+            };
         }
+
         static event ( e ) {
             if ( e.ctrlKey || e.defaultPrevented ) return;
-            const directionY = !e.shiftKey ? Math.sign( e.deltaY ) : 0;
-            const directionX = ( Math.sign( e.deltaX ) == 0 ) && e.shiftKey ? Math.sign( e.deltaY ) : Math.sign( e.deltaX );
-            const obj = WheelAnimationOverride.recursiveTargetFind( e.target, directionX, directionY );
-            obj.element.animationOverrides ??= {
+            const   dirY = !e.shiftKey ? sign( e.deltaY ) : 0,
+                    dirX = ( sign( e.deltaX ) == 0 ) && e.shiftKey ? sign( e.deltaY ) : sign( e.deltaX );
+            const obj = WheelAnimationOverride.findScrollableTarget( e, dirX, dirY );
+            obj.element.__ciui_scrani ??= {
                 animPosX: obj.element.scrollLeft,
                 animPosY: obj.element.scrollTop,
             };
-            if ( !e.shiftKey && obj.scrolly && obj.isYScrollable && directionY !== 0 ) {
+            obj.element.__ciui_scrani.start = performance.now();
+            if ( !e.shiftKey && obj.isYScrollable && dirY !== 0 ) {
                 e.preventDefault(); e.stopPropagation();
-                obj.element.animationOverrides.animEnd = performance.now() + 300;
-                obj.element.animationOverrides.animPosY = Math.clamp( obj.element.animationOverrides.animPosY + e.deltaY, 0, obj.scrollTopMax );
-                if ( obj.element.animationOverrides.animFrame == null ) {
-                    obj.element.animationOverrides.animPosY = Math.clamp( obj.element.scrollTop + e.deltaY, 0, obj.scrollTopMax );
-                    obj.element.animationOverrides.animPosX = obj.element.scrollLeft;
+                obj.element.__ciui_scrani.animEnd = performance.now() + settings.time;
+                obj.element.__ciui_scrani.animPosY = clamp( obj.element.__ciui_scrani.animPosY + e.deltaY, 0, obj.scrollTopMax );
+                obj.element.__ciui_scrani.animRevY = obj.element.scrollTop;
+                if ( obj.element.__ciui_scrani.animFrame == null ) {
+                    obj.element.__ciui_scrani.animPosY = clamp( obj.element.scrollTop + e.deltaY, 0, obj.scrollTopMax );
+                    obj.element.__ciui_scrani.animPosX = obj.element.scrollLeft;
                     requestAnimationFrame( WheelAnimationOverride.frame.bind( obj ) )
                 };
-            } else if ( e.shiftKey && obj.scrollx && obj.isXScrollable && directionX !== 0 ) {
+            } else if ( e.shiftKey && obj.isXScrollable && dirX !== 0 ) {
                 e.preventDefault(); e.stopPropagation();
-                obj.element.animationOverrides.animEnd = performance.now() + 300;
-                obj.element.animationOverrides.animPosX = Math.clamp( obj.element.animationOverrides.animPosX + e.deltaY, 0, obj.scrollLeftMax );
-                if ( obj.element.animationOverrides.animFrame == null ) {
-                    obj.element.animationOverrides.animPosX = Math.clamp( obj.element.scrollLeft + e.deltaY, 0, obj.scrollLeftMax );
-                    obj.element.animationOverrides.animPosY = obj.element.scrollTop;
+                obj.element.__ciui_scrani.animEnd = performance.now() + settings.time;
+                obj.element.__ciui_scrani.animPosX = clamp( obj.element.__ciui_scrani.animPosX + e.deltaY, 0, obj.scrollLeftMax );
+                obj.element.__ciui_scrani.animRevX = obj.element.scrollLeft
+                if ( obj.element.__ciui_scrani.animFrame == null ) {
+                    obj.element.__ciui_scrani.animPosX = clamp( obj.element.scrollLeft + e.deltaY, 0, obj.scrollLeftMax );
+                    obj.element.__ciui_scrani.animPosY = obj.element.scrollTop;
                     requestAnimationFrame( WheelAnimationOverride.frame.bind( obj ) )
                 };
             };
         }
         static frame () {
-            if ( performance.now() > this.element.animationOverrides.animEnd ) {
-                cancelAnimationFrame( this.element.animationOverrides.animFrame );
-                this.element.animationOverrides.animFrame = null;
-                this.element.animationOverrides.animPosX = this.element.scrollLeft;
-                this.element.animationOverrides.animPosY = this.element.scrollTop;
+            if ( performance.now() > this.element.__ciui_scrani.animEnd ) {
+                cancelAnimationFrame( this.element.__ciui_scrani.animFrame );
+                this.element.__ciui_scrani.animFrame = null;
+                this.element.__ciui_scrani.animPosX = this.element.scrollLeft;
+                this.element.__ciui_scrani.animPosY = this.element.scrollTop;
                 return;
             }
-            this.element.scrollTop = Math.lerp( this.element.scrollTop, this.element.animationOverrides.animPosY, 0.3 );
-            this.element.scrollLeft = Math.lerp( this.element.scrollLeft, this.element.animationOverrides.animPosX, 0.3 );
-            this.element.animationOverrides.animFrame = requestAnimationFrame( WheelAnimationOverride.frame.bind( this ) );
+            const rate = easingFunc( percent( performance.now(), this.element.__ciui_scrani.start, this.element.__ciui_scrani.animEnd ) );
+            this.element.scrollTop = lerp( this.element.__ciui_scrani.animRevY, this.element.__ciui_scrani.animPosY, rate );
+            this.element.scrollLeft = lerp( this.element.__ciui_scrani.animRevX, this.element.__ciui_scrani.animPosX, rate );
+            this.element.__ciui_scrani.animFrame = requestAnimationFrame( WheelAnimationOverride.frame.bind( this ) );
         }
     };
     WheelAnimationOverride.override();
